@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transport Fever Fleet Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{
+  --ground:#E7EAEE; --surface:#FBFCFD; --sunk:#DDE2E7;
+  --ink:#13171B; --muted:#5D6772; --faint:#8D97A1;
+  --rule:#C6CDD5; --hair:#D6DCE2;
+  --steam:#AC4526; --diesel:#5F6E33; --electric:#245F8C;
+  --hover:#13171B08;
+  --cut:#B03A3A; --dlx:#8A6A2F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#101317; --surface:#191E23; --sunk:#0B0E11;
+    --ink:#E4E9ED; --muted:#909CA7; --faint:#6B7580;
+    --rule:#2B333A; --hair:#232A30;
+    --steam:#E37750; --diesel:#A6BA63; --electric:#63A9D6;
+    --hover:#FFFFFF0A;
+    --cut:#D96B6B; --dlx:#C8A24E;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101317; --surface:#191E23; --sunk:#0B0E11;
+  --ink:#E4E9ED; --muted:#909CA7; --faint:#6B7580;
+  --rule:#2B333A; --hair:#232A30;
+  --steam:#E37750; --diesel:#A6BA63; --electric:#63A9D6;
+  --hover:#FFFFFF0A;
+  --cut:#D96B6B; --dlx:#C8A24E;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:min(1560px, 96vw); margin:0 auto; padding:clamp(28px,5vw,64px) clamp(16px,4vw,40px) 96px}
+
+/* ---------- masthead ---------- */
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+  display:flex; gap:10px; align-items:center; margin:0 0 18px;
+}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--rule)}
+h1{
+  font-family:"Saira Condensed",sans-serif; font-weight:700;
+  font-size:clamp(38px,6.5vw,66px); line-height:.96; letter-spacing:-.01em;
+  margin:0 0 14px; text-wrap:balance;
+}
+.stand{max-width:none; color:var(--muted); font-size:16px; line-height:1.6; margin:0 0 30px}
+.stand strong{color:var(--ink); font-weight:600}
+
+.keys{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px; background:var(--rule); border:1px solid var(--rule);
+  margin-bottom:44px;
+}
+.key{background:var(--surface); padding:14px 16px}
+.key dt{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:500;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;
+}
+.key dd{
+  margin:0; font-family:"Saira Condensed",sans-serif; font-weight:600;
+  font-size:30px; line-height:1; font-variant-numeric:tabular-nums;
+}
+.key dd small{font-size:13px; font-weight:500; color:var(--muted); margin-left:5px}
+
+h2{
+  font-family:"Saira Condensed",sans-serif; font-weight:700;
+  font-size:clamp(24px,3.4vw,34px); line-height:1.05; letter-spacing:-.005em;
+  margin:0 0 10px; text-wrap:balance;
+}
+h3{
+  font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:20px;
+  margin:0 0 8px; letter-spacing:.005em;
+}
+section{margin-top:54px}
+.lede{color:var(--muted); max-width:none; margin:0 0 22px}
+
+/* ---------- controls ---------- */
+.controls{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; margin-bottom:18px}
+.grp{display:flex; gap:6px; align-items:center}
+.grp-label{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--faint); margin-right:2px;
+}
+.tog{
+  font:inherit; font-size:12.5px; font-weight:500; cursor:pointer;
+  border:1px solid var(--rule); background:var(--surface); color:var(--muted);
+  padding:4px 11px; border-radius:2px; display:inline-flex; align-items:center; gap:6px;
+  transition:color .12s, border-color .12s, background .12s;
+}
+.tog:hover{color:var(--ink); border-color:var(--muted)}
+.tog:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+.tog[aria-pressed="true"]{color:var(--ink); border-color:currentColor; background:transparent}
+.tog .dot{width:9px; height:9px; border-radius:1px; background:currentColor; opacity:.35}
+.tog[aria-pressed="true"] .dot{opacity:1}
+.tog.steam{color:var(--steam)} .tog.diesel{color:var(--diesel)} .tog.electric{color:var(--electric)}
+.tog[aria-pressed="false"]{color:var(--faint)}
+
+/* ---------- instrument ---------- */
+.scroller{overflow-x:auto; border:1px solid var(--rule); background:var(--surface)}
+.instrument{min-width:840px; position:relative}
+.row{display:grid; grid-template-columns:var(--gutter) 1fr}
+:root{--gutter:216px}
+
+.plot{position:relative}
+.ruler{position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--rule)}
+.ruler .gut{
+  display:flex; align-items:flex-end; padding:0 12px 7px;
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--faint); border-right:1px solid var(--rule);
+}
+.ruler .plot{height:100%}
+.tick{position:absolute; bottom:0; transform:translateX(-50%); text-align:center}
+.tick span{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums; display:block; padding-bottom:5px;
+}
+.tick i{display:block; height:5px; width:1px; background:var(--rule); margin:0 auto}
+
+.ribbon{border-bottom:1px solid var(--rule)}
+.ribbon .gut{
+  padding:10px 12px; border-right:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--faint);
+  letter-spacing:.06em; text-transform:uppercase; align-self:center;
+}
+.ribbon svg{display:block; width:100%; height:78px}
+
+.band{grid-column:1 / -1; display:grid; grid-template-columns:var(--gutter) 1fr;
+  border-bottom:1px solid var(--hair); background:var(--sunk)}
+.band b{
+  font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:13px;
+  letter-spacing:.06em; text-transform:uppercase; padding:6px 12px;
+  border-right:1px solid var(--rule); display:flex; gap:8px; align-items:baseline;
+}
+.band b em{font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--muted)}
+.band .plot{display:flex; align-items:center; padding-left:10px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--faint)}
+
+.loco{border-bottom:1px solid var(--hair)}
+.loco:hover{background:var(--hover)}
+.loco .gut{
+  display:flex; align-items:center; gap:8px; padding:0 10px 0 12px; height:26px;
+  border-right:1px solid var(--rule); overflow:hidden;
+}
+.loco .nm{
+  font-family:"Saira Condensed",sans-serif; font-weight:500; font-size:14px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;
+}
+.tag{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.06em;
+  color:var(--faint); border:1px solid var(--hair); padding:0 3px; border-radius:2px; flex:none;
+}
+.spd{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--faint);
+  font-variant-numeric:tabular-nums; flex:none;
+}
+.loco .plot{height:26px}
+.bar{
+  position:absolute; top:6px; height:14px; border-radius:1px;
+  display:flex; align-items:center; min-width:3px;
+}
+.bar.steam{background:var(--steam)} .bar.diesel{background:var(--diesel)} .bar.electric{background:var(--electric)}
+.bar.open::after{
+  content:""; position:absolute; right:-14px; top:0; bottom:0; width:14px;
+  background:linear-gradient(90deg,currentColor,transparent);
+}
+.bar.steam.open{color:var(--steam)} .bar.diesel.open{color:var(--diesel)} .bar.electric.open{color:var(--electric)}
+.loco.off{opacity:.16}
+
+/* grid lines + overlays */
+.vgrid{position:absolute; top:0; bottom:0; width:1px; background:var(--hair);
+  pointer-events:none; z-index:0}
+.scrub{position:absolute; top:0; bottom:0; width:1px; background:var(--ink); z-index:6; pointer-events:none}
+.scrub::before{
+  content:attr(data-y); position:absolute; top:0; left:0; transform:translateX(-50%);
+  background:var(--ink); color:var(--ground); font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; font-weight:500; padding:1px 5px; font-variant-numeric:tabular-nums;
+}
+
+/* ---------- readout ---------- */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  gap:1px; background:var(--rule); border:1px solid var(--rule); border-top:none;
+}
+.ro{background:var(--surface); padding:11px 14px}
+.ro dt{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 4px;
+}
+.ro dd{margin:0; font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:24px;
+  line-height:1; font-variant-numeric:tabular-nums}
+.ro.steam dd{color:var(--steam)} .ro.diesel dd{color:var(--diesel)} .ro.electric dd{color:var(--electric)}
+
+.note{
+  font-size:13px; color:var(--muted); margin-top:12px; display:flex; gap:8px;
+  align-items:flex-start; max-width:none;
+}
+.note b{color:var(--ink); font-weight:600}
+
+/* ---------- prose blocks ---------- */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule)}
+.card{background:var(--surface); padding:18px 18px 20px}
+.card p{margin:0; color:var(--muted); font-size:14px}
+.card .num{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em;
+  color:var(--faint); display:block; margin-bottom:8px;
+}
+table{border-collapse:collapse; width:100%; font-size:14px}
+.tscroll{overflow-x:auto; border:1px solid var(--rule)}
+th,td{text-align:left; padding:8px 13px; border-bottom:1px solid var(--hair); vertical-align:top}
+thead th{
+  background:var(--sunk); font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:500;
+  white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.n{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+.q{color:var(--faint)}
+footer{
+  margin-top:64px; padding-top:20px; border-top:1px solid var(--rule);
+  font-size:12.5px; color:var(--faint); max-width:none; line-height:1.65;
+}
+footer code{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<style>
+/* status of a machine in TpF3 */
+.bar.cut{opacity:.42}
+.bar.cut::before{
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(-45deg,transparent 0 3px,var(--surface) 3px 4px);
+}
+.loco .gut.cut .nm{color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px;
+  text-decoration-color:var(--faint)}
+.mark{
+  position:absolute; top:7px; width:12px; height:12px; transform:translateX(-50%) rotate(45deg);
+  border:1.5px solid currentColor; background:var(--surface);
+}
+.mark.steam{color:var(--steam)} .mark.diesel{color:var(--diesel)} .mark.electric{color:var(--electric)}
+.st{
+  font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.06em;
+  padding:0 3px; border-radius:2px; flex:none; text-transform:uppercase;
+}
+.st.kept{color:var(--surface); background:var(--muted)}
+.st.cut{color:var(--cut); border:1px solid var(--cut)}
+.st.mu{color:var(--muted); border:1px solid var(--rule)}
+.legend{
+  display:flex; flex-wrap:wrap; gap:6px 18px; margin:12px 0 0;
+  font-size:12.5px; color:var(--muted); align-items:center;
+}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.swatch{width:22px; height:10px; border-radius:1px; background:var(--muted); position:relative; flex:none}
+.swatch.cut{opacity:.42}
+.swatch.cut::before{content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(-45deg,transparent 0 3px,var(--surface) 3px 4px)}
+.swatch.mk{width:11px; height:11px; background:var(--surface); border:1.5px solid var(--muted);
+  transform:rotate(45deg); border-radius:0}
+.swatch.l2{height:0; border-top:1.5px dashed var(--muted); background:none}
+.ro.cut dd{color:var(--cut)}
+.readout.pinned{
+  position:sticky; top:0; z-index:20; border-top:1px solid var(--rule);
+  border-bottom:none; margin-bottom:0; box-shadow:0 6px 18px -10px rgba(0,0,0,.45);
+}
+.axis{top:var(--pin, 0px)}
+.ro.wide{grid-column:span 2}
+
+/* ---------- packed timeline ---------- */
+.tl{position:relative; min-width:940px}
+.scroller{max-width:100%}
+.axis{position:sticky; top:0; z-index:5; height:30px; background:var(--surface);
+  border-bottom:1px solid var(--rule)}
+.rib{display:block; width:100%; height:72px; border-bottom:1px solid var(--rule)}
+.blockhdr{
+  display:flex; align-items:baseline; gap:9px; padding:7px 12px;
+  background:var(--sunk); border-bottom:1px solid var(--rule);
+  font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:13px;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+.blockhdr em{font-style:normal; font-family:"IBM Plex Mono",monospace;
+  font-size:11px; color:var(--muted); letter-spacing:0}
+.lane{position:relative; height:21px; border-bottom:1px solid var(--hair); z-index:1}
+.lane:last-child{border-bottom:none}
+.tl .bar{
+  position:absolute; top:3px; height:15px; border-radius:2px;
+  display:flex; align-items:center; overflow:visible;
+}
+.tl .bar .lbl{
+  font-family:"Saira Condensed",sans-serif; font-weight:500; font-size:12px;
+  white-space:nowrap; padding:0 6px; color:var(--surface); line-height:1;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+}
+.tl .bar.out .lbl{text-shadow:none}
+.tl .bar.out .lbl{
+  position:absolute; left:100%; color:var(--ink); padding-left:7px;
+}
+.tl .bar.out.flip .lbl{
+  left:auto; right:100%; padding-left:0; padding-right:7px;
+}
+.tl .bar .lbl b{font-weight:500; opacity:.62; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; margin-left:5px}
+.tl .bar .lbl i.tag{
+  font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:8.5px;
+  letter-spacing:.08em; text-transform:uppercase; border:1px solid currentColor;
+  border-radius:2px; padding:0 3px; margin-left:6px; opacity:.85; vertical-align:1px;
+}
+.tl .bar.out .lbl b{opacity:.5}
+.tl .bar.est::after{
+  content:""; position:absolute; inset:0; border-radius:2px; z-index:0;
+  background:repeating-linear-gradient(-45deg,
+    rgba(0,0,0,0) 0 3px, rgba(0,0,0,.26) 3px 6px);
+}
+:root:not([data-theme="light"]) .tl .bar.est::after,
+:root[data-theme="dark"] .tl .bar.est::after{
+  background:repeating-linear-gradient(-45deg,
+    rgba(0,0,0,0) 0 3px, rgba(0,0,0,.34) 3px 6px);
+}
+.tl .bar .lbl{position:relative; z-index:1}
+/* подпись лежит на сплошном кусочке того же цвета, штриховка её не режет */
+.tl .bar.est .lbl{
+  background:var(--bar); border-radius:2px;
+  box-shadow:0 0 0 1px var(--bar);
+}
+.tl .bar.est.out .lbl{background:none; box-shadow:none}
+.tl .bar:hover{outline:1.5px solid var(--ink); outline-offset:1px; z-index:3}
+/* цвет полосы держим в переменной: он же нужен подписи как подложка */
+.tl .bar.kept{--bar:var(--muted)}
+.tl .bar.gone{--bar:var(--cut)}
+.tl .bar.fresh{--bar:var(--diesel)}
+.tl .bar.dlx{--bar:var(--dlx)}
+.tl .bar[class*="bar "]{background:var(--bar, var(--muted))}
+.tl .bar.gone .lbl, .tl .bar.fresh .lbl, .tl .bar.kept .lbl,
+.tl .bar.dlx .lbl{color:var(--surface)}
+.tl .bar.out.gone .lbl, .tl .bar.out.fresh .lbl,
+.tl .bar.out.kept .lbl, .tl .bar.out.dlx .lbl{color:var(--ink)}
+.tl .tick{position:absolute; bottom:0; transform:translateX(-50%); text-align:center}
+.delta{font-size:13px; font-weight:500; color:var(--muted); margin-left:6px}
+ul.plain{margin:6px 0 0; padding-left:18px; color:var(--muted); font-size:13.5px}
+ul.plain li{margin-bottom:3px}
+.two{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule)}
+</style><style>
+/* ---------- единая прилипающая панель ---------- */
+.toolbar{
+  position:sticky; top:0; z-index:30;
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 26px;
+  padding:11px 0 12px; margin:0 0 28px;
+  background:var(--ground); border-bottom:1px solid var(--rule);
+}
+.toolbar .grp{display:flex; gap:6px; align-items:center}
+.seg{display:inline-flex; border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.seg button{
+  font:inherit; font-size:12.5px; font-weight:500; cursor:pointer;
+  border:none; border-right:1px solid var(--rule); background:var(--surface);
+  color:var(--muted); padding:5px 12px; display:inline-flex; align-items:center; gap:6px;
+  transition:background .12s, color .12s;
+}
+.seg button:last-child{border-right:none}
+.seg button:hover{color:var(--ink)}
+.seg button:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--ground)}
+.seg button .dot{width:9px; height:9px; border-radius:1px}
+.stats{display:flex; flex-wrap:wrap; gap:4px 18px; margin-left:auto; align-items:baseline}
+.stats .who{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--faint); align-self:center;
+}
+.stat{display:flex; align-items:baseline; gap:6px}
+.stat span{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted);
+}
+.stat b{
+  font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:19px;
+  line-height:1; font-variant-numeric:tabular-nums;
+}
+.stat.gone b{color:var(--cut)}
+.tl .bar.moved .lbl::before{content:"⇄"; margin-right:5px; opacity:.75; font-size:11px}
+.tl .bar .lbl i.rgn{
+  font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:8.5px;
+  letter-spacing:.06em; text-transform:uppercase; opacity:.7;
+  margin-right:6px; vertical-align:1px;
+}
+.tl .bar.dim{opacity:.13}
+.tl .bar.pin{outline:2px solid var(--ink); outline-offset:1px; z-index:5}
+
+.search{
+  font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; padding:5px 10px; width:190px;
+}
+.search::placeholder{color:var(--faint)}
+.search:focus{outline:2px solid var(--ink); outline-offset:-2px}
+
+.detail{
+  display:none; width:100%; gap:8px 22px; align-items:baseline; flex-wrap:wrap;
+  padding:9px 0 2px; border-top:1px dashed var(--rule); margin-top:2px;
+}
+.detail.on{display:flex}
+.detail .nm{font-family:"Saira Condensed",sans-serif; font-weight:600; font-size:17px}
+.detail .f{display:flex; gap:6px; align-items:baseline}
+.detail .f span{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted);
+}
+.detail .f b{font-weight:500; font-size:13px}
+.detail .close{
+  margin-left:auto; font:inherit; font-size:12px; cursor:pointer; color:var(--muted);
+  background:none; border:1px solid var(--rule); border-radius:3px; padding:3px 9px;
+}
+.detail .close:hover{color:var(--ink)}
+section{margin-top:40px}
+.axis{top:0}
+</style>
+<style>
+.topline{display:flex; align-items:center; gap:18px; margin-bottom:18px}
+.topline .eyebrow{flex:1; margin:0}
+h1{margin-bottom:28px}
+.lang{display:inline-flex; border:1px solid var(--rule); border-radius:3px; overflow:hidden}
+.lang button{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; cursor:pointer; border:none; padding:5px 9px;
+  border-right:1px solid var(--rule); background:var(--surface); color:var(--muted);
+}
+.lang button:last-child{border-right:none}
+.lang button[aria-pressed="true"]{background:var(--ink); color:var(--ground)}
+.lang button:focus-visible{outline:2px solid var(--ink); outline-offset:-2px}
+</style>
+<style>
+h1{font-size:clamp(24px,2.6vw,34px); line-height:1.18; max-width:none;
+   letter-spacing:0; margin:0 0 6px}
+.subline{display:flex; align-items:baseline; gap:14px; margin:0 0 22px}
+.about-btn{
+  font:inherit; font-size:12px; cursor:pointer; color:var(--muted);
+  background:none; border:1px solid var(--rule); border-radius:3px; padding:3px 10px;
+}
+.about-btn:hover{color:var(--ink)}
+.about-btn:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+.about{
+  display:none; border:1px solid var(--rule); background:var(--surface);
+  padding:16px 18px; margin:0 0 24px; font-size:13.5px; color:var(--muted);
+  line-height:1.65;
+}
+.about.on{display:block}
+.about b{color:var(--ink)}
+.about p{margin:0 0 9px; max-width:none}
+.about p:last-child{margin:0}
+.lang{position:absolute; top:0; right:0}
+.wrap{position:relative}
+.tl .bar .lbl u{text-decoration:none; opacity:.55; margin-left:6px; font-weight:400}
+.tl .bar .lbl i.flag{
+  font-style:normal; font-family:"IBM Plex Mono",monospace; font-size:8.5px;
+  letter-spacing:.06em; text-transform:uppercase; opacity:.8;
+  border:1px solid currentColor; border-radius:2px; padding:0 3px; margin-right:6px;
+}
+.empty{
+  padding:26px 14px; color:var(--faint); font-size:13.5px; text-align:center;
+  border-bottom:1px solid var(--hair);
+}
+</style>
+
+<div class="wrap">
+
+<div class="lang" id="lang">
+  <button data-lang="en" aria-pressed="true">en</button>
+  <button data-lang="ru" aria-pressed="false">ru</button>
+</div>
+
+<h1 data-i18n="title">Every vehicle of Transport Fever 2 and 3 on one timeline: what both games share, what the third one dropped, and what it added.</h1>
+<div class="subline">
+  <button class="about-btn" id="about-btn" data-i18n="about.btn">Where the data comes from</button>
+</div>
+<div class="about" id="about" data-i18n-html="about.text"></div>
+
+<div class="toolbar">
+  <div class="grp">
+    <span class="grp-label" data-i18n="lbl.game">Game</span>
+    <div class="seg" id="seg-game">
+      <button data-game="all" aria-pressed="true" data-i18n="game.all">Both</button>
+      <button data-game="tpf2" aria-pressed="false">TpF2</button>
+      <button data-game="tpf3" aria-pressed="false">TpF3</button>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="grp-label" data-i18n="lbl.eng">Traction</span>
+    <div class="seg" id="seg-eng">
+      <button data-eng="HORSE" aria-pressed="true"><i class="dot" style="background:var(--muted)"></i><span data-i18n="eng.horse">Horse</span></button>
+      <button data-eng="STEAM" aria-pressed="true"><i class="dot" style="background:var(--steam)"></i><span data-i18n="eng.steam">Steam</span></button>
+      <button data-eng="DIESEL" aria-pressed="true"><i class="dot" style="background:var(--diesel)"></i><span data-i18n="eng.diesel">Diesel</span></button>
+      <button data-eng="ELECTRIC" aria-pressed="true"><i class="dot" style="background:var(--electric)"></i><span data-i18n="eng.electric">Electric</span></button>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="grp-label" data-i18n="lbl.mode">Bar</span>
+    <div class="seg" id="seg-mode">
+      <button data-mode="span" aria-pressed="true" data-i18n="mode.span">Sale period</button>
+      <button data-mode="debut" aria-pressed="false" data-i18n="mode.debut">Debut year</button>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="grp-label" data-i18n="lbl.group">Groups</span>
+    <div class="seg" id="seg-group">
+      <button data-group="none" aria-pressed="true" data-i18n="group.none">None</button>
+      <button data-group="fate" aria-pressed="false" data-i18n="group.fate">By fate</button>
+      <button data-group="eng" aria-pressed="false" data-i18n="group.eng">By traction</button>
+      <button data-group="rgn" aria-pressed="false" data-i18n="group.rgn">By region</button>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="grp-label" data-i18n="lbl.search">Search</span>
+    <input class="search" id="q" type="search" data-i18n-ph="ph.search"
+           placeholder="machine name" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="stats">
+    <span class="who" id="who">locomotives</span>
+    <div class="stat"><span data-i18n="st.year">year</span><b id="s-year">1950</b></div>
+    <div class="stat"><span>TpF2</span><b id="s-a">—</b></div>
+    <div class="stat"><span>TpF3</span><b id="s-b">—</b></div>
+    <div class="stat"><span data-i18n="st.shared">shared</span><b id="s-k">—</b></div>
+    <div class="stat gone"><span data-i18n="st.gone">gone</span><b id="s-c">—</b></div>
+    <div class="stat"><span data-i18n="st.kept">survived</span><b id="s-s">—</b></div>
+  </div>
+  <div class="detail" id="detail">
+    <span class="nm" id="d-name"></span>
+    <div class="f"><span data-i18n="d.years">years</span><b id="d-years"></b></div>
+    <div class="f"><span data-i18n="d.where">found in</span><b id="d-where"></b></div>
+    <div class="f"><span data-i18n="d.eng">traction</span><b id="d-eng"></b></div>
+    <div class="f"><span data-i18n="d.rgn">region</span><b id="d-rgn"></b></div>
+    <div class="f"><span data-i18n="d.alt">name in TpF2</span><b id="d-alt"></b></div>
+    <button class="close" id="d-close" data-i18n="d.close">close</button>
+  </div>
+</div>
+
+<p class="legend">
+  <span><i class="swatch" style="background:var(--muted)"></i><span data-i18n="lg.both">in both games</span></span>
+  <span><i class="swatch" style="background:var(--cut)"></i><span data-i18n="lg.only2">TpF2 only</span></span>
+  <span><i class="swatch" style="background:var(--diesel)"></i><span data-i18n="lg.only3">TpF3 only</span></span>
+  <span><i class="swatch" style="background:var(--dlx)"></i><span data-i18n="lg.dlx">was in the paid TpF2 Deluxe pack</span></span>
+  <span><i class="swatch cut"></i><span data-i18n="lg.est">hatched — year estimated from the prototype</span></span>
+</p>
+
+<section>
+  <h2 data-i18n="h.loco">Locomotives</h2>
+  <div class="scroller"><div class="tl" id="loco">
+    <div class="axis" id="loco-axis"></div>
+    <svg class="rib" id="loco-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="loco-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.mu">Multiple units</h2>
+  <div class="scroller"><div class="tl" id="mu">
+    <div class="axis" id="mu-axis"></div>
+    <svg class="rib" id="mu-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="mu-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.bus">Buses</h2>
+  <div class="scroller"><div class="tl" id="bus">
+    <div class="axis" id="bus-axis"></div>
+    <svg class="rib" id="bus-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="bus-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.tram">Trams</h2>
+  <div class="scroller"><div class="tl" id="tram">
+    <div class="axis" id="tram-axis"></div>
+    <svg class="rib" id="tram-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="tram-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.truck">Trucks</h2>
+  <div class="scroller"><div class="tl" id="truck">
+    <div class="axis" id="truck-axis"></div>
+    <svg class="rib" id="truck-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="truck-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.air">Air transport</h2>
+  <div class="scroller"><div class="tl" id="air">
+    <div class="axis" id="air-axis"></div>
+    <svg class="rib" id="air-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="air-rows"></div>
+  </div></div>
+</section>
+
+<section>
+  <h2 data-i18n="h.ship">Ships</h2>
+  <div class="scroller"><div class="tl" id="ship">
+    <div class="axis" id="ship-axis"></div>
+    <svg class="rib" id="ship-rib" preserveAspectRatio="none" viewBox="0 0 1000 72" aria-hidden="true"></svg>
+    <div id="ship-rows"></div>
+  </div></div>
+</section>
+
+</div>
+
+<script>
+const DATA = {"loco": [{"n": "Russian Class V Type 1", "n2": "", "a": 1850, "b": 1900, "e": "STEAM", "s": 45, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class T Type 1", "n2": "", "a": 1857, "b": 1907, "e": "STEAM", "s": 55, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "4-4-0 The General", "n2": "", "a": 1858, "b": 1908, "e": "STEAM", "s": 45, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Borsig", "n2": "", "a": 1862, "b": 1910, "e": "STEAM", "s": 45, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class GV", "n2": "", "a": 1863, "b": 1913, "e": "STEAM", "s": 55, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "2-8-0 Baldwin Class 56", "n2": "", "a": 1871, "b": 1922, "e": "STEAM", "s": 60, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class B", "n2": "", "a": 1871, "b": 1921, "e": "STEAM", "s": 50, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "BR 53 preuss. G 3", "n2": "", "a": 1875, "b": 1927, "e": "STEAM", "s": 50, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class PV", "n2": "", "a": 1877, "b": 1927, "e": "STEAM", "s": 64, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Prussian Class T 3", "n2": "BR 89 preuss. T 3", "a": 1882, "b": 1932, "e": "STEAM", "s": 40, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class F Fairlie", "n2": "", "a": 1884, "b": 1934, "e": "STEAM", "s": 45, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "2-6-0 Mogul", "n2": "", "a": 1885, "b": 1935, "e": "STEAM", "s": 75, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "PLM 220", "n2": "", "a": 1890, "b": 1940, "e": "STEAM", "s": 60, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class OB", "n2": "", "a": 1890, "b": 1940, "e": "STEAM", "s": 60, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Ten Wheeler", "n2": "", "a": 1896, "b": 1946, "e": "STEAM", "s": 100, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "A 3/5", "n2": "", "a": 1900, "b": 1960, "e": "STEAM", "s": 100, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "4-4-2 Atlantic", "n2": "", "a": 1902, "b": 1951, "e": "STEAM", "s": 100, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class SCH", "n2": "", "a": 1906, "b": 1956, "e": "STEAM", "s": 75, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class S", "n2": "", "a": 1910, "b": 1960, "e": "STEAM", "s": 115, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Baden Class VI C", "n2": "BR 75.4 bad. VI c", "a": 1914, "b": 1970, "e": "STEAM", "s": 90, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class YE", "n2": "", "a": 1915, "b": 1965, "e": "STEAM", "s": 70, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "2-8-2 Mikado", "n2": "", "a": 1916, "b": 1965, "e": "STEAM", "s": 80, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Chinese Class JF1", "n2": "China Railways JF1", "a": 1918, "b": 1968, "e": "STEAM", "s": 80, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "MILW-Class EP-2", "n2": "", "a": 1919, "b": 1979, "e": "ELECTRIC", "s": 120, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "CE 6/8 II Crocodile", "n2": "", "a": 1921, "b": 1971, "e": "ELECTRIC", "s": 75, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Class A3 Flying Scotsman", "n2": "", "a": 1925, "b": 1975, "e": "STEAM", "s": 120, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "4-12-2 Class 9000", "n2": "", "a": 1926, "b": 1975, "e": "STEAM", "s": 100, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Ae 4/7", "n2": "", "a": 1927, "b": 1980, "e": "ELECTRIC", "s": 100, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class SU", "n2": "", "a": 1927, "b": 1977, "e": "STEAM", "s": 115, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Alco HH 600", "n2": "", "a": 1930, "b": 1976, "e": "DIESEL", "s": 80, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class FD", "n2": "", "a": 1931, "b": 1981, "e": "STEAM", "s": 85, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "4-4-2 Hiawatha", "n2": "", "a": 1935, "b": 1985, "e": "STEAM", "s": 160, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "British Class A4", "n2": "Class A4", "a": 1935, "b": 1985, "e": "STEAM", "s": 145, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Pennsylvanian Class GG1", "n2": "PRR-Class GG1", "a": 1936, "b": 1995, "e": "ELECTRIC", "s": 160, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "German Class E 94", "n2": "BR E 94", "a": 1938, "b": 1995, "e": "ELECTRIC", "s": 90, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "EMD F-Unit", "n2": "", "chain": "", "a": 1939, "b": 1989, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Alco 4-8-8-4 Big Boy", "n2": "4-8-8-4 Big Boy", "a": 1944, "b": 1994, "e": "STEAM", "s": 130, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Alco PA", "n2": "", "a": 1946, "b": 1994, "e": "DIESEL", "s": 188, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Alco PB", "n2": "", "a": 1946, "b": 1994, "e": "DIESEL", "s": 188, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class L", "n2": "", "a": 1947, "b": 1997, "e": "STEAM", "s": 80, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Swiss RE 4/4 I", "n2": "Re 4/4", "a": 1948, "b": 2005, "e": "ELECTRIC", "s": 125, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "NoHAB AA16", "n2": "", "a": 1954, "b": 2010, "e": "DIESEL", "s": 120, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class P36", "n2": "", "a": 1954, "b": 2004, "e": "STEAM", "s": 125, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "New Haven EP5", "n2": "", "a": 1955, "b": 2005, "e": "ELECTRIC", "s": 140, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class TE3", "n2": "", "a": 1956, "b": 2006, "e": "DIESEL", "s": 100, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Chinese Class RM", "n2": "China Railways RM", "a": 1958, "b": 2008, "e": "STEAM", "s": 110, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "EMD GP 9", "n2": "", "a": 1958, "b": 2007, "e": "DIESEL", "s": 105, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "German Class V 100", "n2": "BR V 100", "a": 1958, "b": 2015, "e": "DIESEL", "s": 90, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Austrian Class 1042", "n2": "Series 1042", "a": 1960, "b": 2025, "e": "ELECTRIC", "s": 140, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Japanese Class EF66", "n2": "", "chain": "", "a": 1966, "b": 2016, "e": "ELECTRIC", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class CHS4", "n2": "", "a": 1966, "b": 0, "e": "ELECTRIC", "s": 160, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "BR 103.1", "n2": "", "a": 1970, "b": 0, "e": "ELECTRIC", "s": 200, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "BR 218", "n2": "", "a": 1971, "b": 0, "e": "DIESEL", "s": 140, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "EMD SD40-2", "n2": "", "a": 1972, "b": 0, "e": "DIESEL", "s": 105, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "EMD AEM-7", "n2": "", "a": 1975, "b": 0, "e": "ELECTRIC", "s": 200, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Chinese Class DF5", "n2": "China Railways DF5", "a": 1976, "b": 0, "e": "DIESEL", "s": 80, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class VL80S", "n2": "", "a": 1982, "b": 0, "e": "ELECTRIC", "s": 110, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Chinese Class DF4B", "n2": "China Railways DF4B", "a": 1984, "b": 0, "e": "DIESEL", "s": 120, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Shaoshan SS4G", "n2": "", "chain": "", "a": 1985, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "GE C40-8W", "n2": "", "a": 1989, "b": 0, "e": "DIESEL", "s": 120, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Ge E60C-2", "n2": "", "a": 1992, "b": 0, "e": "ELECTRIC", "s": 160, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Norwegian Class EL 18", "n2": "", "chain": "", "a": 1996, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "China Railways SS9G", "n2": "", "a": 1998, "b": 0, "e": "ELECTRIC", "s": 170, "st": "cut", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "German Class 185", "n2": "BR 185", "a": 2000, "b": 0, "e": "ELECTRIC", "s": 160, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "German Class 246", "n2": "Series 246", "a": 2000, "b": 0, "e": "DIESEL", "s": 160, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "GE P42DC", "n2": "GE P42 DC", "a": 2005, "b": 0, "e": "DIESEL", "s": 160, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Chinese Class HXD3B", "n2": "China Railways HXD3B", "a": 2009, "b": 0, "e": "ELECTRIC", "s": 120, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "HHP 8", "n2": "", "a": 2010, "b": 0, "e": "ELECTRIC", "s": 200, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Stadler Eurodual", "n2": "Eurodual", "a": 2018, "b": 0, "e": "ELECTRIC", "s": 160, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}], "mu": [{"n": "ACF M-300", "n2": "M-300", "a": 1924, "b": 1972, "e": "DIESEL", "s": 100, "st": "kept", "r": "us", "moved": true, "cargo": false, "heli": false}, {"n": "Pioneer Zephyr", "n2": "", "a": 1934, "b": 1985, "e": "DIESEL", "s": 177, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "CLE 2/4 Roter Pfeil", "n2": "", "a": 1935, "b": 1992, "e": "ELECTRIC", "s": 125, "st": "kept", "r": "eu", "moved": true, "cargo": false, "heli": false}, {"n": "Alco PA/PB", "n2": "", "a": 1946, "b": 1994, "e": "DIESEL", "s": 188, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Uerdingen Railbus", "n2": "Railbus", "a": 1950, "b": 2010, "e": "DIESEL", "s": 90, "st": "kept", "r": "eu", "moved": true, "cargo": false, "heli": false}, {"n": "Russian Class TE3", "n2": "", "a": 1956, "b": 2006, "e": "DIESEL", "s": 100, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "TEE VT 11.5", "n2": "", "chain": "", "a": 1957, "b": 2007, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Shinkansen 0 Series", "n2": "", "a": 1964, "b": 2014, "e": "ELECTRIC", "s": 220, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "RABDe 12/12 Mirage", "n2": "", "a": 1965, "b": 0, "e": "ELECTRIC", "s": 125, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Metroliner", "n2": "", "a": 1969, "b": 0, "e": "ELECTRIC", "s": 193, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Inter-City 125", "n2": "", "chain": "", "a": 1976, "b": 0, "e": "DIESEL", "s": "", "st": "deluxe", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "TGV Duplex", "n2": "TGV", "a": 1981, "b": 0, "e": "ELECTRIC", "s": 300, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Italian Class ETR 450", "n2": "", "chain": "", "a": 1988, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Swiss DPZ Coach", "n2": "", "chain": "", "a": 1988, "b": 0, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Swiss RE 450 DPZ", "n2": "Re 450 commuter train", "a": 1988, "b": 0, "e": "ELECTRIC", "s": 130, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "ICE 1", "n2": "", "a": 1991, "b": 0, "e": "ELECTRIC", "s": 280, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Talbot Talent 1", "n2": "", "chain": "", "a": 1994, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian Class ED9M", "n2": "", "a": 1995, "b": 0, "e": "ELECTRIC", "s": 130, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Speedance Express", "n2": "", "a": 2000, "b": 0, "e": "ELECTRIC", "s": 240, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "RA2", "n2": "", "a": 2005, "b": 0, "e": "DIESEL", "s": 100, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "ES1 Lastochka", "n2": "", "a": 2013, "b": 0, "e": "ELECTRIC", "s": 160, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Rabe 502 Twindexx", "n2": "DUALSTOX", "a": 2014, "b": 0, "e": "ELECTRIC", "s": 200, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Fuxing Hao", "n2": "", "a": 2016, "b": 0, "e": "ELECTRIC", "s": 300, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Avelia Liberty", "n2": "", "a": 2021, "b": 0, "e": "ELECTRIC", "s": 300, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}], "bus": [{"n": "Horse-drawn carriage", "n2": "", "a": 1850, "b": 1905, "e": "HORSE", "s": 18, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Stagecoach", "n2": "", "a": 1850, "b": 1907, "e": "HORSE", "s": 18, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "L'Obéissante", "n2": "", "a": 1870, "b": 1924, "e": "STEAM", "s": 17, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "American stagecoach", "n2": "", "a": 1875, "b": 1930, "e": "HORSE", "s": 20, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Droshky", "n2": "", "a": 1884, "b": 1914, "e": "HORSE", "s": 20, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Landauer", "n2": "", "a": 1891, "b": 1942, "e": "DIESEL", "s": 20, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Mack", "n2": "", "a": 1900, "b": 1952, "e": "DIESEL", "s": 25, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Dux", "n2": "", "a": 1902, "b": 1932, "e": "DIESEL", "s": 30, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Postbus ET 13", "n2": "", "a": 1905, "b": 1956, "e": "DIESEL", "s": 25, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Gaggenau C40", "n2": "", "a": 1909, "b": 1955, "e": "DIESEL", "s": 40, "st": "cut", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Schneider PB2", "n2": "", "a": 1921, "b": 1975, "e": "DIESEL", "s": 35, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Daimler Deck Seat Car", "n2": "", "a": 1922, "b": 1972, "e": "DIESEL", "s": 35, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Yellow Coach Model W", "n2": "", "chain": "", "a": 1927, "b": 1977, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Mitsubishi Fuso B46", "n2": "Fuso B46", "a": 1932, "b": 1975, "e": "DIESEL", "s": 50, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Scania-Vabis H15", "n2": "", "chain": "", "a": 1932, "b": 1982, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Saurer Tüscher", "n2": "", "a": 1939, "b": 1988, "e": "DIESEL", "s": 50, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Twin Coach 44-S", "n2": "", "a": 1942, "b": 1989, "e": "DIESEL", "s": 50, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Zis-155", "n2": "", "a": 1949, "b": 1990, "e": "DIESEL", "s": 60, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz O 6600", "n2": "", "a": 1954, "b": 2000, "e": "DIESEL", "s": 70, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "AEC Routemaster", "n2": "", "chain": "", "a": 1956, "b": 2006, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Citroën U55 Cityrama", "n2": "", "chain": "", "a": 1956, "b": 2006, "e": "DIESEL", "s": "", "st": "deluxe", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "GM New Look Fishbowl", "n2": "GM Fishbowl", "a": 1959, "b": 2010, "e": "DIESEL", "s": 60, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Shinjin Microbus", "n2": "", "chain": "", "a": 1962, "b": 2012, "e": "DIESEL", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Isuzu BU10P", "n2": "", "chain": "", "a": 1970, "b": 2020, "e": "DIESEL", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "MAN SL 192", "n2": "", "a": 1970, "b": 2020, "e": "DIESEL", "s": 80, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz O303", "n2": "", "chain": "", "a": 1974, "b": 2024, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "BK 670", "n2": "", "a": 1976, "b": 2025, "e": "DIESEL", "s": 80, "st": "cut", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Beijing BK670", "n2": "", "chain": "", "a": 1976, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Chevrolet C60", "n2": "", "a": 1976, "b": 2025, "e": "DIESEL", "s": 80, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz O405 G", "n2": "", "chain": "", "a": 1985, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Berkhof Duvedec", "n2": "", "a": 1986, "b": 0, "e": "DIESEL", "s": 90, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "New Flyer D40", "n2": "", "a": 1990, "b": 0, "e": "DIESEL", "s": 90, "st": "kept", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Maz 103", "n2": "", "a": 1996, "b": 0, "e": "DIESEL", "s": 100, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz Citaro G1", "n2": "", "chain": "", "a": 1997, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Volvo 5000", "n2": "", "a": 1997, "b": 0, "e": "DIESEL", "s": 100, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Irisbus Crossway LE", "n2": "", "chain": "", "a": 2006, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Wright StreetCar", "n2": "", "a": 2008, "b": 0, "e": "DIESEL", "s": 100, "st": "kept", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Rampini Eltron", "n2": "", "chain": "", "a": 2016, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Zuhai GTQ", "n2": "", "a": 2017, "b": 0, "e": "ELECTRIC", "s": 60, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz eCitaro", "n2": "eCitaro", "a": 2019, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}], "tram": [{"n": "Horse tram", "n2": "Horse-Drawn Streetcar", "a": 1850, "b": 1905, "e": "HORSE", "s": 20, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Horse tram (cargo)", "n2": "", "chain": "", "a": 1850, "b": 1900, "e": "HORSE", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Horse-Drawn Streetcar USA", "n2": "", "a": 1850, "b": 1920, "e": "HORSE", "s": 18, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Open car", "n2": "", "chain": "", "a": 1850, "b": 1900, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Closed car", "n2": "", "chain": "", "a": 1860, "b": 1910, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "St. Petersburg Streetcar", "n2": "", "a": 1863, "b": 1903, "e": "HORSE", "s": 20, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Steam tram", "n2": "Dampftram", "a": 1877, "b": 1930, "e": "STEAM", "s": 26, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Double deck car", "n2": "", "chain": "", "a": 1880, "b": 1930, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Ivan", "n2": "", "a": 1882, "b": 1922, "e": "STEAM", "s": 26, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Stadtbahn Halle", "n2": "", "a": 1887, "b": 1945, "e": "ELECTRIC", "s": 27, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "San Diego Electric Trolley", "n2": "", "a": 1893, "b": 1945, "e": "ELECTRIC", "s": 25, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Tram cargo wagons (cargo, box, stake, gondola, tank)", "n2": "", "chain": "tram-cargo", "a": 1895, "b": 1950, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Sydney 24S Motor Car", "n2": "", "chain": "", "a": 1899, "b": 1949, "e": "ELECTRIC", "s": "", "st": "new", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Swiss Ge 2/2", "n2": "Ce 2/2 SchSt", "a": 1901, "b": 1955, "e": "ELECTRIC", "s": 40, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Kolomna", "n2": "", "a": 1904, "b": 1944, "e": "STEAM", "s": 30, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Nuremberg F Motor Car", "n2": "", "chain": "", "a": 1905, "b": 1955, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Moscow F", "n2": "", "a": 1908, "b": 1948, "e": "ELECTRIC", "s": 35, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Hong Kong Tram", "n2": "", "chain": "", "a": 1912, "b": 1962, "e": "ELECTRIC", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Vienna Type LH", "n2": "", "chain": "", "a": 1912, "b": 1962, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Peter Witt Streetcar", "n2": "", "a": 1917, "b": 1967, "e": "ELECTRIC", "s": 35, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Gotha T1 Motor Car", "n2": "Type T1", "a": 1928, "b": 1970, "e": "ELECTRIC", "s": 60, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Russian X-Series (cargo)", "n2": "", "chain": "", "a": 1928, "b": 1978, "e": "ELECTRIC", "s": "", "st": "new", "r": "ru", "moved": false, "cargo": true, "heli": false}, {"n": "DL 3000 Witt", "n2": "", "a": 1930, "b": 1970, "e": "ELECTRIC", "s": 30, "st": "cut", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Pittsburgh PCC 1643", "n2": "PCC 1643 Pittsburgh", "a": 1940, "b": 1990, "e": "ELECTRIC", "s": 45, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "GE 25-ton switcher", "n2": "", "chain": "", "a": 1941, "b": 1991, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "KTM 1", "n2": "", "a": 1947, "b": 1987, "e": "ELECTRIC", "s": 40, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Italian ATM Series 4000", "n2": "Atm 4000", "a": 1949, "b": 2010, "e": "ELECTRIC", "s": 40, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Tram cargo wagons (cargo, box, stake, gondola, tank)", "n2": "", "chain": "tram-cargo", "a": 1950, "b": 2005, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Toronto PCC A-7", "n2": "", "a": 1954, "b": 2004, "e": "ELECTRIC", "s": 50, "st": "cut", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Duewag Motor Car", "n2": "", "chain": "", "a": 1956, "b": 2006, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Schöma Tm 2/2", "n2": "", "chain": "", "a": 1962, "b": 2012, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Zurich BE 4/6 Mirage", "n2": "Be 4/6 Mirage", "a": 1966, "b": 2020, "e": "ELECTRIC", "s": 60, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Tatra T4 (cargo)", "n2": "", "chain": "", "a": 1967, "b": 2017, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Toyoma 8000", "n2": "", "chain": "", "a": 1967, "b": 2017, "e": "ELECTRIC", "s": "", "st": "deluxe", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "LM 68", "n2": "", "a": 1968, "b": 2008, "e": "ELECTRIC", "s": 60, "st": "cut", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Toronto CRLV", "n2": "", "a": 1976, "b": 0, "e": "ELECTRIC", "s": 60, "st": "cut", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Toronto CLV", "n2": "", "chain": "", "a": 1977, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Duewag Typ N8C", "n2": "", "chain": "", "a": 1981, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "St. Petersberg LVS-86", "n2": "LVS 86", "a": 1986, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Articulated cargo tram (cargo)", "n2": "", "chain": "", "a": 1990, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Bombardier K4000", "n2": "", "chain": "", "a": 1994, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "other", "moved": false, "cargo": false, "heli": false}, {"n": "Skoda 10 T", "n2": "", "a": 2000, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Be 5/6 Cobra", "n2": "", "a": 2001, "b": 0, "e": "ELECTRIC", "s": 60, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Dresden CarGoTram (cargo)", "n2": "", "chain": "", "a": 2001, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Changchun 3000", "n2": "", "chain": "", "a": 2002, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Tram cargo wagons (cargo, box, stake, gondola, tank)", "n2": "", "chain": "tram-cargo", "a": 2005, "b": 0, "e": "", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": true, "heli": false}, {"n": "Stadler Citylink", "n2": "", "chain": "", "a": 2011, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Moscow Vityaz M", "n2": "Vityaz M", "a": 2014, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "CAF Urbos 3", "n2": "", "a": 2018, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Stadler TINA", "n2": "", "chain": "", "a": 2022, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}], "truck": [{"n": "European Horse-Drawn Carriage", "n2": "", "a": 1850, "b": 1925, "e": "HORSE", "s": 18, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Horse carriage", "n2": "American Horse-Drawn Carriage", "a": 1850, "b": 1925, "e": "HORSE", "s": 18, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Asian Horse-Drawn Carriage", "n2": "", "a": 1875, "b": 1915, "e": "HORSE", "s": 20, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "DMG Cannstatt", "n2": "", "a": 1890, "b": 1946, "e": "DIESEL", "s": 25, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Steam truck", "n2": "Steam", "a": 1894, "b": 1945, "e": "STEAM", "s": 25, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "NW First Truck", "n2": "", "a": 1899, "b": 1939, "e": "DIESEL", "s": 20, "st": "cut", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Benz 3-ton Box", "n2": "Benz", "a": 1912, "b": 1960, "e": "DIESEL", "s": 40, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Mac AC Stake", "n2": "Mack AC", "a": 1916, "b": 1965, "e": "DIESEL", "s": 30, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "AMO F-15", "n2": "AMO F15", "a": 1924, "b": 1964, "e": "DIESEL", "s": 40, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "Ford Model 77 Bulk", "n2": "Ford Model 77", "a": 1930, "b": 1975, "e": "DIESEL", "s": 40, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Ford Model AA Box", "n2": "", "chain": "", "a": 1931, "b": 1981, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Opel Blitz", "n2": "", "a": 1935, "b": 1980, "e": "DIESEL", "s": 60, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Gaz MM Stake", "n2": "GAZ MM", "a": 1938, "b": 1978, "e": "DIESEL", "s": 60, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "GMC 660 DFM", "n2": "", "chain": "", "a": 1939, "b": 1989, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Saurer C Type", "n2": "", "a": 1942, "b": 1995, "e": "DIESEL", "s": 60, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Studebaker US6", "n2": "", "a": 1945, "b": 1995, "e": "DIESEL", "s": 60, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "ZIS-150 Bulk", "n2": "ZIS-150", "a": 1947, "b": 1987, "e": "DIESEL", "s": 60, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "MAN 19.304", "n2": "", "a": 1965, "b": 2010, "e": "DIESEL", "s": 80, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Isuzu ELF TLD20", "n2": "", "a": 1967, "b": 0, "e": "DIESEL", "s": 80, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Peterbilt 359", "n2": "", "a": 1970, "b": 2020, "e": "DIESEL", "s": 80, "st": "kept", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Kenworth K100E", "n2": "", "chain": "", "a": 1974, "b": 2024, "e": "DIESEL", "s": "", "st": "deluxe", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Freightliner FLD 112", "n2": "", "chain": "", "a": 1988, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "GAZ 3307 Cargo", "n2": "Gaz 3307", "a": 1989, "b": 0, "e": "DIESEL", "s": 90, "st": "kept", "r": "ru", "moved": false, "cargo": false, "heli": false}, {"n": "40 Ton", "n2": "", "a": 1990, "b": 0, "e": "DIESEL", "s": 100, "st": "cut", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Volvo FH12", "n2": "", "chain": "", "a": 1993, "b": 0, "e": "DIESEL", "s": "", "st": "new", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Cascadia", "n2": "", "a": 1995, "b": 0, "e": "DIESEL", "s": 100, "st": "cut", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "FAW Jiefang J6P Cargo", "n2": "FAW Jiefang J6P", "a": 2014, "b": 0, "e": "DIESEL", "s": 100, "st": "kept", "r": "asia", "moved": false, "cargo": false, "heli": false}, {"n": "Mercedes-Benz Urban Etruck", "n2": "Urban eTruck", "a": 2020, "b": 0, "e": "ELECTRIC", "s": 70, "st": "kept", "r": "eu", "moved": false, "cargo": false, "heli": false}, {"n": "Rivian EDV Box", "n2": "", "chain": "", "a": 2021, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}, {"n": "Tesla Semi", "n2": "", "chain": "", "a": 2022, "b": 0, "e": "ELECTRIC", "s": "", "st": "new", "r": "us", "moved": false, "cargo": false, "heli": false}], "air": [{"n": "Junkers F 13 Herta", "n2": "Junkers F 13", "a": 1920, "b": 1950, "e": "", "s": 137, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Vickers J6860 Victoria", "n2": "Vickers Victoria", "a": 1922, "b": 1960, "e": "", "s": 150, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Dornier Merkur", "n2": "", "a": 1925, "b": 1960, "e": "", "s": 175, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Fokker F VII A", "n2": "", "chain": "", "a": 1925, "b": 1975, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Junkers JU-52 Iron Annie", "n2": "Junkers JU-52", "a": 1933, "b": 1982, "e": "", "s": 200, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Douglas DC-3 airliner", "n2": "Douglas DC-3", "a": 1935, "b": 1970, "e": "", "s": 331, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Curtiss C-46 Commando", "n2": "", "chain": "", "a": 1940, "b": 1990, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Douglas C-49 Skytrain", "n2": "", "a": 1942, "b": 1980, "e": "", "s": 331, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Douglas DC-4 airliner", "n2": "Douglas DC-4", "a": 1944, "b": 1975, "e": "", "s": 364, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Bell 47", "n2": "", "chain": "", "a": 1946, "b": 1996, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Bristol Type 170 freighter", "n2": "Bristol Freighter", "a": 1946, "b": 1980, "e": "", "s": 350, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Lockheed L-1049 Super Connie airliner", "n2": "Lockheed Super Constellation L-1049", "a": 1952, "b": 1986, "e": "", "s": 486, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Lockheed L-1049 Super Connie freighter", "n2": "Lockheed Super Constellation L-1049D/H", "a": 1952, "b": 1986, "e": "", "s": 486, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Piasecki H-21 Workhorse", "n2": "", "chain": "", "a": 1952, "b": 2002, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Canadair CL-44 freighter", "n2": "Canadair CL-44", "a": 1959, "b": 2000, "e": "", "s": 644, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "De Havilland DH.106 Comet", "n2": "De Havilland Comet 4B", "a": 1960, "b": 2000, "e": "", "s": 724, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Convair CV 900 Coronado", "n2": "", "chain": "", "a": 1961, "b": 2011, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Boeing 737-200C", "n2": "", "a": 1962, "b": 2020, "e": "", "s": 778, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Lockheed L-100 Hercules", "n2": "", "a": 1962, "b": 0, "e": "", "s": 540, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Sikorsky S-64 Skycrane", "n2": "", "chain": "", "a": 1962, "b": 2012, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Boeing 737-100", "n2": "", "a": 1968, "b": 2020, "e": "", "s": 778, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "McDonnell Douglas DC-10-30CF airliner", "n2": "", "chain": "", "a": 1971, "b": 2021, "e": "", "s": "", "st": "deluxe", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "McDonnell Douglas DC-10-30CF freighter", "n2": "", "chain": "", "a": 1971, "b": 2021, "e": "", "s": "", "st": "deluxe", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Bell 206 Long Ranger", "n2": "", "chain": "", "a": 1974, "b": 2024, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Aérospatiale-BAC Concorde", "n2": "", "chain": "", "a": 1976, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Short 330 C-23 Sherpa", "n2": "", "a": 1976, "b": 0, "e": "", "s": 455, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Br. Aerospace 146 airliner", "n2": "Br. Aerospace 146", "a": 1978, "b": 0, "e": "", "s": 752, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Br. Aerospace 146 freighter", "n2": "Br. Aerospace 146 200 QT", "a": 1978, "b": 0, "e": "", "s": 752, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Sikorsky S-76 Spirit", "n2": "", "chain": "", "a": 1979, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Boeing Vertol 234 Chinook", "n2": "", "chain": "", "a": 1980, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Mil MI-26TC", "n2": "", "chain": "", "a": 1983, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Boeing 757-200", "n2": "", "a": 1984, "b": 0, "e": "", "s": 893, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Boeing 757-200PF / SF", "n2": "", "a": 1984, "b": 0, "e": "", "s": 893, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Short 300 Sherpa", "n2": "", "chain": "", "a": 1984, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Airbus A310 300F freighter", "n2": "", "chain": "", "a": 1985, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Fokker 100 airliner", "n2": "", "chain": "", "a": 1988, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Airbus A320 airliner", "n2": "Airbus A320", "a": 1992, "b": 0, "e": "", "s": 828, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Kaman K-Max", "n2": "", "chain": "", "a": 1994, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Tupolev Tu-204C airliner", "n2": "Tupolev Tu-204", "a": 1995, "b": 0, "e": "", "s": 850, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Tupolev Tu-204C freighter", "n2": "Tupolev Tu-204C", "a": 1995, "b": 0, "e": "", "s": 850, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Boeing 737-700 airliner", "n2": "Boeing 737-700", "a": 1998, "b": 0, "e": "", "s": 974, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Boeing 737-700-C freighter", "n2": "Boeing 737-700-C", "a": 1998, "b": 0, "e": "", "s": 974, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Eurocopter 120B Colibri", "n2": "", "chain": "", "a": 1998, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "AgustaWestland AW101 Merlin", "n2": "", "chain": "", "a": 1999, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Bombardier DHC-8 airliner", "n2": "Bombardier Q400", "a": 2000, "b": 0, "e": "", "s": 648, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Bombardier DHC-8 freighter", "n2": "Bombardier DHC-8-402PF", "a": 2000, "b": 0, "e": "", "s": 648, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Sukhoi Superjet 100", "n2": "", "a": 2000, "b": 0, "e": "", "s": 871, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Airbus H225 Super Puma", "n2": "", "chain": "", "a": 2004, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}, {"n": "Bombardier CS300", "n2": "", "a": 2013, "b": 0, "e": "", "s": 832, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Airbus Canada A220", "n2": "", "chain": "", "a": 2016, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Next Gen VTOL", "n2": "", "chain": "", "a": 2030, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": true}], "ship": [{"n": "Rigi", "n2": "", "a": 1850, "b": 1930, "e": "", "s": 25, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Wilhelm I", "n2": "", "a": 1850, "b": 1910, "e": "", "s": 22, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Zoroaster", "n2": "", "a": 1850, "b": 1910, "e": "", "s": 22, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Sydfart", "n2": "", "chain": "", "a": 1868, "b": 1918, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Sternwheeler", "n2": "", "chain": "", "a": 1870, "b": 1920, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Dunara Castle", "n2": "", "a": 1875, "b": 1940, "e": "", "s": 25, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Terra Nova", "n2": "", "chain": "", "a": 1884, "b": 1934, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Frontenac", "n2": "", "a": 1885, "b": 1940, "e": "", "s": 28, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Klondike", "n2": "", "a": 1898, "b": 1960, "e": "", "s": 30, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Canadian trawler", "n2": "", "chain": "", "a": 1900, "b": 1950, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Vandal", "n2": "", "a": 1900, "b": 1960, "e": "", "s": 26, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Waimarie", "n2": "", "chain": "", "a": 1900, "b": 1950, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "PS Trillium", "n2": "", "chain": "", "a": 1910, "b": 1960, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Schaffhausen", "n2": "", "a": 1913, "b": 1985, "e": "", "s": 32, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "TS Queen Mary", "n2": "", "chain": "", "a": 1933, "b": 1983, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Zurich", "n2": "", "a": 1935, "b": 0, "e": "", "s": 32, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "MS Stadt Kiel", "n2": "", "chain": "", "a": 1936, "b": 1986, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Votrans Towboat Cargo", "n2": "Votrans Towboat", "a": 1943, "b": 0, "e": "", "s": 27, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Votrans Towboat Tanker", "n2": "Votrans Tanker Towboat", "a": 1943, "b": 0, "e": "", "s": 27, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Axalp", "n2": "", "a": 1950, "b": 0, "e": "", "s": 30, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Viola", "n2": "", "a": 1950, "b": 0, "e": "", "s": 30, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Wopper", "n2": "", "chain": "", "a": 1950, "b": 2000, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "HC SR.N6", "n2": "", "a": 1970, "b": 0, "e": "", "s": 93, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Cap Arkona", "n2": "", "chain": "", "a": 1971, "b": 2021, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Graf Zeppelin", "n2": "", "a": 1980, "b": 0, "e": "", "s": 35, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "AP1-88 hovercraft", "n2": "", "chain": "", "a": 1983, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Tora coaster ship", "n2": "", "chain": "", "a": 1985, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Hercules XI Tanker Towboat", "n2": "", "a": 1990, "b": 0, "e": "", "s": 28, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Hercules XI Towboat", "n2": "", "a": 1990, "b": 0, "e": "", "s": 28, "st": "kept", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Meridian Ferry", "n2": "", "chain": "", "a": 1990, "b": 0, "e": "", "s": "", "st": "deluxe", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Merlin", "n2": "", "a": 1990, "b": 0, "e": "", "s": 32, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Hadag Type 2000", "n2": "", "chain": "", "a": 2000, "b": 0, "e": "", "s": "", "st": "new", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Damen Ferry", "n2": "", "a": 2009, "b": 0, "e": "", "s": 70, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Virgo Tanker Towboat", "n2": "", "a": 2013, "b": 0, "e": "", "s": 30, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}, {"n": "Virgo Towboat", "n2": "", "a": 2013, "b": 0, "e": "", "s": 30, "st": "cut", "r": "", "moved": false, "cargo": false, "heli": false}]};
+
+/* ---------------------------------------------------------------- строки */
+const RU = {
+  "doc.title": "Наложение парков Transport Fever",
+  title: "Весь транспорт Transport Fever 2 и 3 на одной шкале: что есть в обеих частях, что третья потеряла и что добавила.",
+  "about.btn": "Откуда данные",
+  "about.text": "<p><b>Transport Fever 2</b> разобран по файлам установленной игры: годы продажи, тип тяги, скорость. Это точные значения, а не оценки.</p><p><b>Transport Fever 3</b> на момент составления ещё не вышла. Состав взят из артбука Collector’s Edition, где перечислена вся техника, но без годов. Машины, перешедшие из второй части, датированы её файлами. Для остальных взята реальная дата постройки прототипа, а срок продажи принят в 50 лет — столько машина в среднем продаётся в TpF2. <b>Такие полосы заштрихованы: их даты — оценка, а не факт.</b></p><p>Классы даны по третьей части. Три машины, числившиеся во второй локомотивами, в третьей стали моторвагонными и показаны там, со знаком ⇄. Названия тоже по третьей части; если во второй машина называлась иначе, старое имя стоит следом в скобках.</p><p><b>Артбук мог устареть.</b> Он печатался до релиза, а те, кто уже играет, видят другие характеристики — книгу, судя по всему, сдали в печать раньше балансных правок. Состав техники здесь взят из неё, но числовые характеристики из артбука на этой странице сознательно не используются.</p><p>Тип тяги для машин, которых во второй части не было, проставлен по прототипу: в артбуке его нет. У кораблей и самолётов тяги не хранит ни одна из игр, поэтому фильтр на них не действует — при выборе конкретного типа они скрываются, как и прицепные вагоны.</p>",
+  "lbl.game": "Игра", "game.all": "Обе",
+  "lbl.eng": "Тяга", "eng.horse": "Конная", "eng.steam": "Пар",
+  "eng.diesel": "ДВС", "eng.electric": "Электро",
+  "lbl.mode": "Полоса", "mode.span": "Срок продажи", "mode.debut": "Год появления",
+  "lbl.group": "Группы", "group.none": "Без", "group.fate": "По судьбе",
+  "group.eng": "По тяге", "group.rgn": "По региону",
+  "lbl.search": "Поиск", "ph.search": "название машины",
+  "st.year": "год", "st.shared": "общих", "st.gone": "ушло", "st.kept": "уцелело",
+  "d.years": "годы", "d.where": "где", "d.eng": "тяга", "d.speed": "скорость",
+  "d.rgn": "регион", "d.alt": "имя в TpF2", "d.close": "закрыть",
+  "h.loco": "Локомотивы", "h.mu": "Моторвагонные поезда", "h.bus": "Автобусы",
+  "h.tram": "Трамваи", "h.truck": "Грузовики", "h.air": "Воздушный транспорт",
+  "h.ship": "Корабли",
+  "lg.both": "есть в обеих", "lg.only2": "только TpF2", "lg.only3": "только TpF3",
+  "lg.dlx": "было в платном наборе TpF2 Deluxe",
+  "lg.est": "штриховка — год оценён по прототипу",
+  "who.loco": "локомотивы", "who.mu": "моторвагонные", "who.bus": "автобусы",
+  "who.tram": "трамваи", "who.truck": "грузовики", "who.air": "воздух",
+  "who.ship": "корабли",
+  "where.kept": "в обеих частях", "where.cut": "только в TpF2",
+  "where.new": "только в TpF3", "where.deluxe": "в TpF2 только в Deluxe, в TpF3 в базовой игре",
+  "tr.HORSE": "конная", "tr.STEAM": "паровая", "tr.DIESEL": "ДВС",
+  "tr.ELECTRIC": "электрическая",
+  "rg.ru": "СССР / Россия", "rg.us": "США", "rg.asia": "Азия",
+  "rg.eu": "Европа", "rg.other": "прочее",
+  "v.open": "бессрочно", "v.proto": "(оценка по прототипу)", "v.same": "то же",
+  "v.wasLoco": ", в TpF2 был локомотивом", "v.kmh": "км/ч", "v.dash": "—",
+  "tip.proto": " · год оценён по прототипу", "tip.wasLoco": " · в TpF2 был локомотивом",
+  "tip.cargo": " · грузовой", "tip.heli": " · вертолёт",
+  "gf.kept": "Есть в обеих частях", "gf.cut": "Вырезано из TpF3",
+  "gf.deluxe": "Было в Deluxe второй части", "gf.new": "Новое в TpF3",
+  "ge.HORSE": "Конная тяга", "ge.STEAM": "Паровая тяга", "ge.DIESEL": "ДВС",
+  "ge.ELECTRIC": "Электрическая тяга", "ge.": "Тяга не указана",
+  "gr.eu": "Европа", "gr.us": "США", "gr.ru": "СССР и Россия",
+  "gr.asia": "Азия", "gr.other": "Прочее", "gr.": "Страна не указана",
+  "empty": "Под выбранные фильтры ничего не подходит",
+  "flag.cargo": "груз", "flag.heli": "верт",
+};
+const EN = {
+  "doc.title": "Transport Fever Fleet Overlay",
+  "about.text": "<p><b>Transport Fever 2</b> is read straight out of the installed game files: sale years, traction type, top speed. These are exact values, not estimates.</p><p><b>Transport Fever 3</b> had not shipped when this was put together. Its roster comes from the Collector's Edition artbook, which lists every vehicle but gives no years. Machines carried over from the second game keep its dates. The rest are dated by the prototype's real debut, with a sale period of 50 years — the median a vehicle stays on sale in TpF2. <b>Those bars are hatched: their dates are an estimate, not a fact.</b></p><p>Classes follow the third game. Three machines listed as locomotives in the second are multiple units in the third and appear there, marked ⇄. Names follow the third game too; where the second called a machine something else, the old name follows in brackets.</p><p><b>The artbook may be out of date.</b> It went to print before release, and people already playing report different figures — the book was evidently finished before the balance pass. The roster here comes from it, but none of its numeric specifications are used on this page.</p><p>Traction for machines the second game never had is attributed from the prototype — the artbook does not state it. Neither game records traction for ships and aircraft, so the filter does not apply there: picking a specific type hides them, along with unpowered trailers.</p>",
+  "who.loco": "locomotives", "who.mu": "multiple units", "who.bus": "buses",
+  "who.tram": "trams", "who.truck": "trucks", "who.air": "air", "who.ship": "ships",
+  "where.kept": "in both games", "where.cut": "TpF2 only",
+  "where.new": "TpF3 only", "where.deluxe": "TpF2 Deluxe pack, base game in TpF3",
+  "tr.HORSE": "horse", "tr.STEAM": "steam", "tr.DIESEL": "diesel",
+  "tr.ELECTRIC": "electric",
+  "rg.ru": "USSR / Russia", "rg.us": "USA", "rg.asia": "Asia",
+  "rg.eu": "Europe", "rg.other": "other",
+  "v.open": "open-ended", "v.proto": "(estimated from prototype)", "v.same": "same",
+  "v.wasLoco": ", a locomotive in TpF2", "v.kmh": "km/h", "v.dash": "—",
+  "tip.proto": " · year estimated from prototype", "tip.wasLoco": " · was a locomotive in TpF2",
+  "tip.cargo": " · cargo", "tip.heli": " · helicopter",
+  "gf.kept": "In both games", "gf.cut": "Cut from TpF3",
+  "gf.deluxe": "In the TpF2 Deluxe pack", "gf.new": "New in TpF3",
+  "ge.HORSE": "Horse traction", "ge.STEAM": "Steam traction", "ge.DIESEL": "Combustion",
+  "ge.ELECTRIC": "Electric traction", "ge.": "Traction not recorded",
+  "gr.eu": "Europe", "gr.us": "USA", "gr.ru": "USSR and Russia",
+  "gr.asia": "Asia", "gr.other": "Other", "gr.": "Region not applicable",
+  empty: "Nothing matches the current filters",
+  "flag.cargo": "cargo", "flag.heli": "heli",
+};
+const DEFAULTS = {};
+for (const el of document.querySelectorAll("[data-i18n]"))
+  DEFAULTS[el.dataset.i18n] = el.textContent;
+for (const el of document.querySelectorAll("[data-i18n-ph]"))
+  DEFAULTS[el.dataset.i18nPh] = el.placeholder;
+Object.assign(EN, DEFAULTS, EN);
+
+let lang = "en";
+const t = k => (lang === "ru" ? RU[k] : EN[k]) ?? EN[k] ?? k;
+
+/* ---------------------------------------------------------------- данные */
+const XMIN = 1900, XMAX = 2030, SPAN = XMAX - XMIN;
+const ENG_ORDER = ["HORSE", "STEAM", "DIESEL", "ELECTRIC"];
+const ENG_CLASS = {HORSE: "kept", STEAM: "steam", DIESEL: "diesel", ELECTRIC: "electric"};
+const ST_CLASS = {kept: "kept", cut: "gone", new: "fresh", deluxe: "dlx"};
+const pct = y => ((Math.max(y, XMIN) - XMIN) / SPAN) * 100;
+const endOf = d => d.b === 0 ? XMAX : d.b;
+const live = (d, y) => d.a <= y && y <= endOf(d);
+const inTpf2 = d => d.st === "kept" || d.st === "cut";
+const inTpf3 = d => d.st === "kept" || d.st === "new" || d.st === "deluxe";
+
+const CHARTS = [
+  {id: "loco", who: "who.loco"}, {id: "mu", who: "who.mu"},
+  {id: "bus", who: "who.bus"}, {id: "tram", who: "who.tram"},
+  {id: "truck", who: "who.truck"}, {id: "air", who: "who.air"},
+  {id: "ship", who: "who.ship"},
+];
+
+const keyOf = d => `${d.n}|${d.a}|${d.st}`;
+const state = {game: "all", eng: new Set(ENG_ORDER), mode: "span", group: "none",
+               year: 1950, who: "loco", q: "", pin: null};
+
+const allEng = () => state.eng.size === ENG_ORDER.length;
+const byGame = d => state.game === "all" ? true
+                  : state.game === "tpf2" ? inTpf2(d) : inTpf3(d);
+/* тяги нет у кораблей и самолётов — ни одна игра её для них не хранит,
+   поэтому они видны, только когда выбраны все типы */
+/* В классе, где тяги нет вообще (корабли, воздух), фильтр по тяге
+   не применяется: иначе секция просто пустела и это читалось как поломка. */
+const HAS_ENG = {};
+const byEng = d => d.e ? state.eng.has(d.e) : allEng();
+const byEngIn = (id, d) => HAS_ENG[id] ? byEng(d) : true;
+const visibleIn = (id, d) => byGame(d) && byEngIn(id, d);
+for (const c of CHARTS) HAS_ENG[c.id] = DATA[c.id].some(d => d.e);
+const visible = d => byGame(d) && byEng(d);
+const matches = d => {
+  const q = state.q.trim().toLowerCase();
+  if (!q) return true;
+  return d.n.toLowerCase().includes(q) || (d.n2 || "").toLowerCase().includes(q);
+};
+
+/* ------------------------------------------------------------- отрисовка */
+function axis(el) {
+  el.textContent = "";
+  for (let y = XMIN; y <= XMAX; y += 10) {
+    const tick = document.createElement("div");
+    tick.className = "tick";
+    tick.style.left = pct(y) + "%";
+    if (y === XMIN) tick.style.transform = "translateX(0)";
+    if (y === XMAX) tick.style.transform = "translateX(-100%)";
+    tick.innerHTML = (y % 20 === 0 ? `<span>${y}</span>` : `<span>&nbsp;</span>`) + "<i></i>";
+    el.appendChild(tick);
+  }
+}
+
+const CHAR_PX = 6.0, PAD_PX = 14, GAP_PX = 8;
+const labelOf = d => d.n + (d.n2 ? ` (${d.n2})` : "");
+
+function packRows(items, width) {
+  const perYear = width / SPAN;
+  const lanes = [];
+  const measure = d => {
+    const textW = `${labelOf(d)} ${d.a}`.length * CHAR_PX + PAD_PX
+                + (d.moved ? 14 : 0) + (d.r ? 30 : 0)
+                + (d.cargo || d.heli ? 34 : 0);
+    const barW = state.mode === "debut" ? textW
+               : (endOf(d) - Math.max(d.a, XMIN)) * perYear;
+    d._inside = barW >= textW;
+    d._w = barW; d._textW = textW;
+    return {x0: (Math.max(d.a, XMIN) - XMIN) * perYear,
+            end: (Math.max(d.a, XMIN) - XMIN) * perYear
+                 + barW + (d._inside ? 0 : textW) + GAP_PX};
+  };
+  /* Поколения одной серии не пересекаются во времени и должны читаться
+     как одна линия, поэтому дорожка им выделяется общая. */
+  const chained = new Map();
+  for (const d of items)
+    if (d.chain) (chained.get(d.chain) ?? chained.set(d.chain, []).get(d.chain)).push(d);
+  for (const [, members] of chained) {
+    const spans = members.map(measure);
+    const from = Math.min(...spans.map(s => s.x0));
+    const to = Math.max(...spans.map(s => s.end));
+    let i = 0;
+    while (i < lanes.length && lanes[i] > from) i++;
+    if (i === lanes.length) lanes.push(0);
+    lanes[i] = to;
+    for (const d of members) d._lane = i;
+  }
+  for (const d of items) {
+    if (d.chain) continue;
+    const {x0, end: occupied} = measure(d);
+    let i = 0;
+    while (i < lanes.length && lanes[i] > x0) i++;
+    if (i === lanes.length) lanes.push(0);
+    lanes[i] = occupied;
+    d._lane = i;
+  }
+  return lanes.length;
+}
+
+const GROUPS = {
+  fate: {order: ["kept", "cut", "deluxe", "new"], prefix: "gf.",
+         of: d => d.st},
+  eng:  {order: [...ENG_ORDER, ""], prefix: "ge.", of: d => d.e || ""},
+  rgn:  {order: ["eu", "us", "ru", "asia", "other", ""], prefix: "gr.",
+         of: d => d.r || ""},
+};
+
+function grouped(items) {
+  const g = GROUPS[state.group];
+  if (!g) return [["", items]];
+  const buckets = new Map(g.order.map(k => [k, []]));
+  for (const d of items) {
+    const k = g.of(d);
+    if (buckets.has(k)) buckets.get(k).push(d);
+  }
+  const filled = [...buckets].filter(([, v]) => v.length);
+  if (filled.length < 2) return [["", items]];   // одна корзина — заголовок лишний
+  return filled.map(([k, v]) => [`${t(g.prefix + k)} · ${v.length}`, v]);
+}
+
+function render(c) {
+  const host = document.getElementById(c.id + "-rows");
+  const width = Math.max(host.clientWidth, 940);
+  const items = DATA[c.id].filter(d => visibleIn(c.id, d));
+  host.textContent = "";
+  if (!items.length) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = t("empty");
+    host.appendChild(e);
+    return;
+  }
+  for (const [label, chunk] of grouped(items)) {
+    if (label) {
+      const hdr = document.createElement("div");
+      hdr.className = "blockhdr";
+      hdr.textContent = label;
+      host.appendChild(hdr);
+    }
+    drawChunk(host, chunk, width);
+  }
+}
+
+function drawChunk(host, items, width) {
+  const lanes = [];
+  for (let i = 0, n = packRows(items, width); i < n; i++) {
+    const l = document.createElement("div");
+    l.className = "lane";
+    host.appendChild(l); lanes.push(l);
+  }
+  for (const d of items) {
+    const open = d.b === 0, l = pct(d.a);
+    const r = state.mode === "debut" ? l + (d._w / width) * 100 : pct(endOf(d));
+    const est = d.st === "new" || d.st === "deluxe";
+    const willOverflow = !d._inside
+      && (Math.max(d.a, XMIN) - XMIN) / SPAN * width + d._w + d._textW > width;
+    const bar = document.createElement("div");
+    bar.className = `bar ${ST_CLASS[d.st]}${d._inside ? "" : " out"}`
+      + `${willOverflow ? " flip" : ""}${est ? " est" : ""}${d.moved ? " moved" : ""}`;
+    bar.style.left = l + "%";
+    bar.style.width = Math.max(r - l, 0.4) + "%";
+    bar.title = `${labelOf(d)} · ${Math.max(d.a, XMIN)}–${open ? "…" : d.b}`
+      + ` · ${t("where." + d.st)}`
+      + (d.e ? ` · ${t("tr." + d.e)}` : "")
+      + (d.cargo ? t("tip.cargo") : "") + (d.heli ? t("tip.heli") : "")
+      + (est ? t("tip.proto") : "") + (d.moved ? t("tip.wasLoco") : "");
+    const flags = (d.cargo ? `<i class="flag">${t("flag.cargo")}</i>` : "")
+                + (d.heli ? `<i class="flag">${t("flag.heli")}</i>` : "");
+    // «Hadag Type 2000» с дебютом в 2000-м не должен читаться как «20002000»
+    const year = d.n.trim().endsWith(String(d.a)) ? "" : `<b>${d.a}</b>`;
+    bar.innerHTML = `<span class="lbl"><i class="rgn">${d.r || ""}</i>${flags}`
+                  + `${d.n}${year}${d.n2 ? `<u>(${d.n2})</u>` : ""}</span>`;
+    bar._d = d;
+    if (state.q && !matches(d)) bar.classList.add("dim");
+    if (state.pin && keyOf(state.pin) === keyOf(d)) bar.classList.add("pin");
+    bar.addEventListener("click", () => pinBar(d));
+    lanes[d._lane].appendChild(bar);
+  }
+}
+
+function ribbon(c) {
+  /* лента показывает то же, что и полосы под ней */
+  const all = DATA[c.id].filter(d => visibleIn(c.id, d));
+  const kept = [], gone = [], fresh = [];
+  for (let y = XMIN; y <= XMAX; y++) {
+    const alive = all.filter(d => live(d, y));
+    kept.push(alive.filter(d => d.st === "kept").length);
+    gone.push(alive.filter(d => d.st === "cut").length);
+    fresh.push(alive.filter(d => d.st === "new" || d.st === "deluxe").length);
+  }
+  const total = kept.map((v, i) => v + gone[i]);
+  const max = Math.max(...total, ...fresh, 1), W = 1000, H = 72, pad = 8;
+  const X = i => (i / SPAN) * W, Y = v => H - pad - (v / max) * (H - pad * 2);
+  const area = a => `M0,${H} ` +
+    a.map((v, i) => `L${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ") + ` L${W},${H} Z`;
+  const line = a => a.map((v, i) =>
+    `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  document.getElementById(c.id + "-rib").innerHTML =
+      `<path d="${area(total)}" fill="var(--cut)" opacity=".38"></path>`
+    + `<path d="${area(kept)}" fill="var(--muted)" opacity=".55"></path>`
+    + `<path d="${line(total)}" fill="none" stroke="var(--cut)" stroke-width="1.4"></path>`
+    + `<path d="${line(kept)}" fill="none" stroke="currentColor" stroke-width="1.4"></path>`
+    + `<path d="${line(fresh)}" fill="none" stroke="var(--diesel)" stroke-width="1.4" stroke-dasharray="4 3"></path>`;
+}
+
+function stats() {
+  /* считаем по тому, что показано: иначе при фильтре «только TpF3»
+     счётчики продолжали жить своей жизнью и показывали потери */
+  const c = CHARTS.find(x => x.id === state.who) || CHARTS[0];
+  const all = DATA[c.id].filter(d => visibleIn(c.id, d) && live(d, state.year));
+  const k = all.filter(d => d.st === "kept").length;
+  const g = all.filter(d => d.st === "cut").length;
+  const f = all.filter(d => d.st === "new" || d.st === "deluxe").length;
+  const set = (id, v) => document.getElementById(id).textContent = v;
+  document.getElementById("who").textContent = t(c.who);
+  set("s-year", state.year); set("s-a", k + g); set("s-b", k + f);
+  set("s-k", k); set("s-c", g);
+  set("s-s", k + g ? Math.round(k / (k + g) * 100) + " %" : t("v.dash"));
+}
+
+function pinBar(d) {
+  state.pin = (state.pin && keyOf(state.pin) === keyOf(d)) ? null : d;
+  const box = document.getElementById("detail");
+  if (!state.pin) { box.classList.remove("on"); repaintPins(); return; }
+  fillDetail(d);
+  box.classList.add("on");
+  repaintPins();
+}
+
+function fillDetail(d) {
+  const set = (id, v) => document.getElementById(id).textContent = v;
+  const est = d.st === "new" || d.st === "deluxe";
+  set("d-name", d.n);
+  set("d-years", `${d.a} — ${d.b === 0 ? t("v.open") : d.b}`
+                 + (est ? " " + t("v.proto") : ""));
+  set("d-where", t("where." + d.st)
+                 + (d.moved ? t("v.wasLoco") : ""));
+  set("d-eng", d.e ? t("tr." + d.e) : t("v.dash"));
+  set("d-rgn", t("rg." + (d.r || "other")));
+  const altField = document.getElementById("d-alt").parentElement;
+  altField.style.display = d.st === "kept" ? "" : "none";
+  if (d.st === "kept") set("d-alt", d.n2 || t("v.same"));
+}
+
+function repaintPins() {
+  for (const bar of document.querySelectorAll(".tl .bar"))
+    bar.classList.toggle("pin", !!state.pin && bar._d && keyOf(bar._d) === keyOf(state.pin));
+}
+function repaintSearch() {
+  for (const bar of document.querySelectorAll(".tl .bar"))
+    bar.classList.toggle("dim", !!state.q.trim() && bar._d && !matches(bar._d));
+}
+
+function overlays() {
+  for (const c of CHARTS) {
+    const inst = document.getElementById(c.id);
+    inst.querySelectorAll(".vgrid,.scrub").forEach(n => n.remove());
+    for (let y = XMIN + 20; y < XMAX; y += 20) {
+      const g = document.createElement("div");
+      g.className = "vgrid"; g.style.left = pct(y) + "%";
+      inst.appendChild(g);
+    }
+    const sc = document.createElement("div");
+    sc.className = "scrub"; sc.dataset.y = state.year;
+    sc.style.left = pct(state.year) + "%";
+    inst.appendChild(sc);
+  }
+}
+
+function drawAll() {
+  for (const c of CHARTS) { axis(document.getElementById(c.id + "-axis")); render(c); ribbon(c); }
+  overlays(); stats();
+}
+const redraw = () => { for (const c of CHARTS) { render(c); ribbon(c); } overlays(); stats(); saveUrl(); };
+
+/* ------------------------------------------------- состояние в адресе */
+function saveUrl() {
+  const p = new URLSearchParams();
+  if (state.game !== "all") p.set("game", state.game);
+  if (!allEng()) p.set("eng", [...state.eng].join(","));
+  if (state.mode !== "span") p.set("bar", state.mode);
+  if (state.group !== "none") p.set("group", state.group);
+  if (state.year !== 1950) p.set("year", state.year);
+  if (state.q.trim()) p.set("q", state.q.trim());
+  if (lang !== "en") p.set("lang", lang);
+  const hash = p.toString();
+  history.replaceState(null, "", hash ? "#" + hash : location.pathname);
+}
+function loadUrl() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get("game")) state.game = p.get("game");
+  if (p.get("eng")) state.eng = new Set(p.get("eng").split(",").filter(x => ENG_ORDER.includes(x)));
+  if (p.get("bar")) state.mode = p.get("bar");
+  if (p.get("group")) state.group = p.get("group");
+  if (p.get("year")) state.year = Math.min(XMAX, Math.max(XMIN, +p.get("year") || 1950));
+  if (p.get("q")) { state.q = p.get("q"); document.getElementById("q").value = state.q; }
+  if (p.get("lang") === "ru") lang = "ru";
+  if (!state.eng.size) state.eng = new Set(ENG_ORDER);
+  const press = (box, attr, val) => {
+    for (const b of document.querySelectorAll(`#${box} button`))
+      b.setAttribute("aria-pressed", String(b.dataset[attr] === val));
+  };
+  press("seg-game", "game", state.game);
+  press("seg-mode", "mode", state.mode);
+  press("seg-group", "group", state.group);
+  for (const b of document.querySelectorAll("#seg-eng button"))
+    b.setAttribute("aria-pressed", String(state.eng.has(b.dataset.eng)));
+}
+
+/* ------------------------------------------------------------ управление */
+for (const c of CHARTS) {
+  const inst = document.getElementById(c.id);
+  inst.addEventListener("pointerenter", () => { state.who = c.id; stats(); });
+  inst.addEventListener("pointermove", e => {
+    const r = inst.getBoundingClientRect();
+    const rel = (e.clientX - r.left) / inst.clientWidth;
+    if (rel < 0 || rel > 1) return;
+    state.who = c.id;
+    state.year = Math.round(XMIN + rel * SPAN);
+    moveScrub(); stats();
+  });
+}
+function moveScrub() {
+  for (const c of CHARTS) {
+    const sc = document.getElementById(c.id).querySelector(".scrub");
+    if (sc) { sc.style.left = pct(state.year) + "%"; sc.dataset.y = state.year; }
+  }
+}
+
+function segment(id, prop) {
+  const box = document.getElementById(id);
+  box.addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    state[prop] = btn.dataset[prop];
+    [...box.children].forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+    redraw();
+  });
+}
+segment("seg-game", "game");
+segment("seg-mode", "mode");
+segment("seg-group", "group");
+
+/* тяга — множественный выбор: steam + diesel одновременно */
+document.getElementById("seg-eng").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const on = btn.getAttribute("aria-pressed") === "true";
+  if (on && state.eng.size === 1) return;
+  on ? state.eng.delete(btn.dataset.eng) : state.eng.add(btn.dataset.eng);
+  btn.setAttribute("aria-pressed", String(!on));
+  redraw();
+});
+
+document.getElementById("q").addEventListener("input", e => {
+  state.q = e.target.value;
+  repaintSearch(); saveUrl();
+});
+document.getElementById("d-close").addEventListener("click", () => {
+  state.pin = null;
+  document.getElementById("detail").classList.remove("on");
+  repaintPins();
+});
+document.getElementById("about-btn").addEventListener("click", () => {
+  document.getElementById("about").classList.toggle("on");
+});
+addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    const q = document.getElementById("q");
+    if (document.activeElement === q && q.value) { q.value = ""; state.q = ""; repaintSearch(); saveUrl(); }
+    else if (state.pin) document.getElementById("d-close").click();
+    return;
+  }
+  if (e.target.id === "q") return;
+  const step = e.shiftKey ? 10 : 1;
+  if (e.key === "ArrowLeft") state.year = Math.max(XMIN, state.year - step);
+  else if (e.key === "ArrowRight") state.year = Math.min(XMAX, state.year + step);
+  else return;
+  e.preventDefault();
+  moveScrub(); stats(); saveUrl();
+});
+
+/* ---------------------------------------------------------------- языки */
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.title = t("doc.title");
+  for (const el of document.querySelectorAll("[data-i18n]"))
+    el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-html]"))
+    el.innerHTML = t(el.dataset.i18nHtml);
+  for (const el of document.querySelectorAll("[data-i18n-ph]"))
+    el.placeholder = t(el.dataset.i18nPh);
+  for (const b of document.querySelectorAll("#lang button"))
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+  if (state.pin) fillDetail(state.pin);
+  redraw();
+}
+document.getElementById("lang").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  lang = btn.dataset.lang;
+  try { localStorage.setItem("tf-lang", lang); } catch (_) {}
+  applyLang();
+});
+try {
+  const saved = localStorage.getItem("tf-lang");
+  if (saved === "ru" || saved === "en") lang = saved;
+} catch (_) {}
+
+loadUrl();
+drawAll();
+applyLang();
+let raf;
+addEventListener("resize", () => {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(drawAll);
+});
+</script>
+
+</body>
+</html>
